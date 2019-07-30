@@ -3,6 +3,7 @@
 # This utility removes docker images. It defaults to dangling images, but has other options.
 # Written by Capprin Bass 07/30/2019
 
+set -e
 
 function usage {
 	echo "This utility removes dangling docker images. The removed images are constrained by options."
@@ -30,7 +31,10 @@ CONFIRM=true
 ASK=false
 
 # Confirm we have docker
-command -v docker > /dev/null &2>1 || (echo >&2 "You don't have docker installed. Not much reason to use this utility without it..."; exit 1; )
+command -v docker > /dev/null 2>&1 || (echo >&2 "You don't have docker installed."; exit 1; )
+
+# Confirm docker is running
+docker version > /dev/null 2>&1 || (echo >&2 "Docker isn't running!"; exit 1; )
 
 # Parsing optional arguments
 while [[ $# -gt 0 ]]
@@ -91,12 +95,14 @@ unset response
 # Grab image ID's and do remove
 docker image ls $SEARCH | egrep --only-matching "\b[0-9a-z]{12}\b" | while read -r id; do
 	if [ "$ASK" = true ]; then
-		read -p "Delete image $id? [y/n]: " response </dev/tty
+		read -p "Delete image $id? [y/n/q]: " response </dev/tty
 		if [ "$response" == "y" ]; then
 			:
 		elif [ "$response" == "n" ]; then
 			echo "Ignoring image $id"
 			continue
+		elif [ "$response" == "q" ]; then
+			exit 0
 		else
 			echo "Invalid response. Exiting."
 			exit 1
@@ -107,4 +113,4 @@ docker image ls $SEARCH | egrep --only-matching "\b[0-9a-z]{12}\b" | while read 
 done
 [[ $? != 0 ]] && exit $?
 
-echo "Done, exiting."
+echo "Done."
