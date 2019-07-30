@@ -109,7 +109,7 @@ docker image ls $SEARCH | egrep --only-matching "\b[0-9a-z]{12}\b" | while read 
 		fi
 	fi
 	echo "Removing image $id:"
-	docker image rm $id
+	docker image rm -f $id
 done
 [[ $? != 0 ]] && exit $?
 
