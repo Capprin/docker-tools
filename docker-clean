@@ -18,8 +18,8 @@ function usage {
 	echo "--confirm, -c:"
 	echo "	Confirms deletion for each image id"
 	echo ""
-	echo "--reckless, -r:"
-	echo "	Removes all images without confirming beforehand"
+	echo "--no-confirm, -n:"
+	echo "	Removes all images without confirmation beforehand"
 	echo ""
 	echo "--help, -h"
 	echo "	Prints usage"
@@ -52,7 +52,7 @@ do
 			usage
 			exit 0
 			;;
-		-r | --reckless)
+		-n | --no-confirm)
 			CONFIRM=false
 			;;
 		-c | --confirm)
