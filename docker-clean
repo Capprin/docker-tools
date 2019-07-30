@@ -1,0 +1,110 @@
+#!/bin/bash
+
+# This utility removes docker images. It defaults to dangling images, but has other options.
+# Written by Capprin Bass 07/30/2019
+
+
+function usage {
+	echo "This utility removes dangling docker images. The removed images are constrained by options."
+	echo "Usage: ./clean [OPTIONS]"
+	echo ""
+	echo "--all, -a:"
+	echo "	Removes ALL images"
+	echo ""
+	echo "--filter [STRING], -f [STRING]:"
+	echo "	Filters by repository. Supports globbing."
+	echo ""
+	echo "--confirm, -c:"
+	echo "	Confirms deletion for each image id"
+	echo ""
+	echo "--reckless, -r:"
+	echo "	Removes all images without confirming beforehand"
+	echo ""
+	echo "--help, -h"
+	echo "	Prints usage"
+}
+
+SEARCH=""
+ALL=false
+CONFIRM=true
+ASK=false
+
+# Confirm we have docker
+command -v docker > /dev/null &2>1 || (echo >&2 "You don't have docker installed. Not much reason to use this utility without it..."; exit 1; )
+
+# Parsing optional arguments
+while [[ $# -gt 0 ]]
+do
+	key="${1}"
+	case $key in
+		-a | --all)
+			ALL=true
+			;;
+		-f | --filter)
+			SEARCH+=" $2 "
+			shift			
+			;;
+		-h | --help)
+			usage
+			exit 0
+			;;
+		-r | --reckless)
+			CONFIRM=false
+			;;
+		-c | --confirm)
+			ASK=true
+			;;		
+		*)
+			echo "Error: Unknown option $key"
+			usage
+			exit 1
+			;;
+	esac
+	shift
+done
+
+# Doing dangling search by default
+if [ "$ALL" = false ]; then
+	SEARCH+="--filter dangling=true"
+fi
+
+# Confirm image removal by default
+if [ "$CONFIRM" = true ]; then
+	echo "The below images will be removed:"
+	docker image ls $SEARCH
+	read -p "The above images will be forever removed by this operation. Are you sure you want to continue? [y/n]: " response
+	if [ "$response" == "y" ]; then
+		:
+	elif [ "$response" == "n" ]; then
+		echo "Operation aborted. Exiting."
+		exit 0
+	else
+		echo "Not a valid response. Exiting."
+		exit 1
+	fi
+else
+	echo "Removing images without confirmation."
+fi
+
+unset response
+
+# Grab image ID's and do remove
+docker image ls $SEARCH | egrep --only-matching "\b[0-9a-z]{12}\b" | while read -r id; do
+	if [ "$ASK" = true ]; then
+		read -p "Delete image $id? [y/n]: " response </dev/tty
+		if [ "$response" == "y" ]; then
+			:
+		elif [ "$response" == "n" ]; then
+			echo "Ignoring image $id"
+			continue
+		else
+			echo "Invalid response. Exiting."
+			exit 1
+		fi
+	fi
+	echo "Removing image $id:"
+	docker image rm $id
+done
+[[ $? != 0 ]] && exit $?
+
+echo "Done, exiting."
